@@ -1,0 +1,5 @@
+{
+  "name": "Copy of Casino Slot Machine",
+  "description": "Однобарабанный игровой автомат, который прокручивает профили пользователей. Нажмите 'SPIN', чтобы определить победителя!",
+  "requestFramePermissions": []
+}

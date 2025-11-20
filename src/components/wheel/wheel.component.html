@@ -1,0 +1,117 @@
+<!-- This component now represents the central part of the machine -->
+<div class="flex flex-col h-full justify-between">
+  <!-- Wrapper for the reel frame and the now-external lights -->
+  <div class="relative">
+    <!-- 1. The light-colored frame holding the reel -->
+    <div class="bg-gradient-to-b from-slate-100 to-slate-300 p-2 sm:p-3 rounded-lg shadow-inner border-2 border-slate-400">
+        <!-- Viewport for the reel with gradient overlay for lens effect -->
+      <div #viewport 
+           class="relative w-full h-96 bg-slate-200 rounded-md overflow-hidden" 
+           style="box-shadow: inset 0 4px 15px rgba(0,0,0,0.4); perspective: 800px; transform-style: preserve-3d;">
+        <!-- Gradient overlays for depth (made stronger) -->
+        <div class="absolute top-0 left-0 w-full h-2/5 bg-gradient-to-b from-black/50 to-transparent z-10 pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 w-full h-2/5 bg-gradient-to-t from-black/50 to-transparent z-10 pointer-events-none"></div>
+
+        <!-- Center Red Line -->
+        <div class="absolute top-1/2 left-0 w-full h-px bg-red-500/60 shadow-[0_0_3px_#ef4444] -translate-y-1/2 z-20"></div>
+
+        <!-- The reel strip itself -->
+        <div #reel 
+             class="w-full transition-transform [will-change:transform]"
+             [style.transition-duration]="transitionDuration()"
+             [style.transition-timing-function]="transitionTimingFunction()"
+             [style.transform]="reelTransform()">
+          
+          @for (item of reelItems(); track $index) {
+            <!-- A single item on the reel, now with its own background and frame effect -->
+            <div class="h-32 w-full flex items-center justify-start px-8 bg-slate-100 border-b border-slate-300 transition-all duration-500"
+                 [style.box-shadow]="getBoxShadow($index)"
+                 [style.transform]="getItemTransform($index)"
+                 [class.animate-flip]="!isSpinning() && winningIndex() === $index">
+              <div class="flex items-center gap-4">
+                <img [ngSrc]="item.avatarUrl" width="56" height="56" 
+                     class="rounded-full border-2 border-slate-400 shadow-md transition-all duration-300"
+                     [class.!border-amber-400]="!isSpinning() && winningIndex() === $index"
+                     alt="Avatar">
+                <span class="text-xl font-semibold text-zinc-800 tracking-wide transition-colors duration-300"
+                      [class.!text-black]="!isSpinning() && winningIndex() === $index">
+                      {{ item.nickname }}
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+    
+    <!-- Winning line indicators & Marker Lights -->
+    <div class="absolute inset-y-0 left-0 right-0 flex justify-between items-center pointer-events-none z-20">
+      <!-- Left Lights Column-->
+      <div class="h-full flex flex-col justify-around">
+        <div class="w-3 h-3 rounded-full bg-red-900 border border-black/50 transition-all duration-150" [class.!bg-red-500]="activeLightIndex() === 0" [class.shadow-[0_0_10px_#ef4444]]="activeLightIndex() === 0"></div>
+        <div class="w-3 h-3 rounded-full bg-green-900 border border-black/50 transition-all duration-150" [class.!bg-green-400]="activeLightIndex() === 1" [class.shadow-[0_0_10px_#4ade80]]="activeLightIndex() === 1"></div>
+        <div class="w-3 h-3 rounded-full bg-red-900 border border-black/50 transition-all duration-150" [class.!bg-red-500]="activeLightIndex() === 2" [class.shadow-[0_0_10px_#ef4444]]="activeLightIndex() === 2"></div>
+      </div>
+      
+      <!-- Right Lights Column -->
+      <div class="h-full flex flex-col justify-around">
+        <div class="w-3 h-3 rounded-full bg-red-900 border border-black/50 transition-all duration-150" [class.!bg-red-500]="activeLightIndex() === 0" [class.shadow-[0_0_10px_#ef4444]]="activeLightIndex() === 0"></div>
+        <div class="w-3 h-3 rounded-full bg-green-900 border border-black/50 transition-all duration-150" [class.!bg-green-400]="activeLightIndex() === 1" [class.shadow-[0_0_10px_#4ade80]]="activeLightIndex() === 1"></div>
+        <div class="w-3 h-3 rounded-full bg-red-900 border border-black/50 transition-all duration-150" [class.!bg-red-500]="activeLightIndex() === 2" [class.shadow-[0_0_10px_#ef4444]]="activeLightIndex() === 2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. The dark control panel -->
+  <div class="mt-2 sm:mt-3 bg-zinc-700 p-3 sm:p-4 rounded-lg shadow-[inset_0_3px_8px_rgba(0,0,0,0.6)] border-t border-zinc-600 flex-grow flex flex-col justify-between">
+    <!-- Speed Control Slider -->
+    <div class="w-full flex flex-col items-center">
+      <label for="speed-slider" class="text-slate-300 text-sm mb-2">Скорость вращения</label>
+      <div class="flex items-center gap-3 w-full">
+        <span class="text-xs text-slate-400">Быстро</span>
+        <input id="speed-slider" 
+               type="range" 
+               min="2000" 
+               max="5000" 
+               step="100"
+               [value]="spinDurationMs()"
+               (input)="onSpeedChange($event)"
+               [disabled]="isSpinning()"
+               class="w-full h-1.5 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-red-600 disabled:opacity-50 disabled:cursor-not-allowed">
+        <span class="text-xs text-slate-400">Медленно</span>
+      </div>
+      <span class="mt-2 text-sm font-medium text-slate-200">{{ (spinDurationMs() / 1000).toFixed(1) }} сек.</span>
+    </div>
+
+    <!-- Spin Button -->
+    <button (click)="spin()" [disabled]="isSpinning()"
+            class="mt-4 w-full h-14 rounded-lg bg-gradient-to-b from-red-600 to-red-800 
+                   border-b-4 border-red-900
+                   flex items-center justify-center text-xl font-bold text-white uppercase
+                   cursor-pointer z-10 select-none tracking-widest
+                   transition-all duration-150 shadow-lg
+                   hover:from-red-500 hover:to-red-700
+                   active:border-b-0 active:translate-y-1
+                   disabled:from-slate-600 disabled:to-slate-800 disabled:text-slate-400 
+                   disabled:border-slate-700 disabled:cursor-not-allowed">
+      {{ isSpinning() ? '...' : 'SPIN' }}
+    </button>
+    
+    <!-- Result Display Area -->
+    <div class="mt-4 h-[84px] w-full"> <!-- Fixed height placeholder -->
+      @if (selectedItem(); as winner) {
+        <div class="w-full h-full flex flex-col items-center justify-center text-center bg-slate-900/80 p-2 rounded-xl shadow-lg border border-slate-700 transition-all duration-500"
+             [class.opacity-100]="resultVisible()"
+             [class.opacity-0]="!resultVisible()"
+             [class.scale-100]="resultVisible()"
+             [class.scale-90]="!resultVisible()">
+          <p class="text-sm text-slate-300">Победитель:</p>
+          <div class="flex items-center gap-3 mt-1">
+            <img [ngSrc]="winner.avatarUrl" width="40" height="40" class="rounded-full border-2 border-slate-600" alt="Winner Avatar">
+            <p class="text-2xl font-bold text-white" style="text-shadow: 0 0 5px #fff, 0 0 10px #fff;">{{ winner.nickname }}</p>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

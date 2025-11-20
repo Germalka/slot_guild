@@ -1,0 +1,97 @@
+<div class="fixed top-4 right-4 z-50">
+  <button (click)="toggleDataSource()" 
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 text-white shadow-lg"
+          [class.bg-blue-600]="dataSource() === 'api'"
+          [class.hover:bg-blue-500]="dataSource() === 'api'"
+          [class.bg-green-600]="dataSource() === 'test'"
+          [class.hover:bg-green-500]="dataSource() === 'test'">
+    Режим: {{ dataSource() === 'api' ? 'API' : 'Тест' }}
+  </button>
+</div>
+
+<main class="w-full min-h-screen flex items-center justify-center p-4 font-sans gap-8">
+  <!-- Slot machine body -->
+  <div class="w-full max-w-xs sm:max-w-sm md:max-w-md bg-zinc-800 p-2 sm:p-3 rounded-2xl shadow-[inset_0_4px_10px_rgba(0,0,0,0.6),_0_20px_40px_rgba(0,0,0,0.5)] border-t border-zinc-600" 
+       style="background: linear-gradient(145deg, #2d2d2d, #1e1e1e);">
+    
+    <div class="flex items-stretch justify-center gap-2 sm:gap-3">
+      <!-- Left WIN Column -->
+      <div class="flex flex-col justify-around items-center bg-zinc-900/50 rounded-lg px-1 sm:px-2">
+        <span class="text-4xl sm:text-5xl font-black text-amber-400" style="text-shadow: 0 0 8px #f59e0b, 0 0 16px #d97706;">W</span>
+        <span class="text-4xl sm:text-5xl font-black text-amber-400" style="text-shadow: 0 0 8px #f59e0b, 0 0 16px #d97706;">I</span>
+        <span class="text-4xl sm:text-5xl font-black text-amber-400" style="text-shadow: 0 0 8px #f59e0b, 0 0 16px #d97706;">N</span>
+      </div>
+
+      <!-- Center Column: Slot Machine Reel -->
+      <div class="flex-grow">
+        @switch (dataState().status) {
+          @case ('loading') {
+            <div class="h-full flex items-center justify-center bg-slate-800 rounded-lg border-4 border-slate-700 min-h-[600px]">
+              <div class="flex flex-col items-center gap-4">
+                 <div class="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-slate-500"></div>
+                 <p class="text-slate-400 animate-pulse">
+                   {{ dataSource() === 'api' ? 'Загрузка данных с API...' : 'Загрузка тестовых данных...' }}
+                 </p>
+              </div>
+            </div>
+          }
+          @case ('error') {
+            <div class="h-full flex flex-col items-center justify-center text-center bg-red-900/20 border-4 border-red-500/30 rounded-lg min-h-[600px] p-4">
+              <h3 class="text-2xl font-bold text-red-400">Ошибка загрузки</h3>
+              <p class="mt-2 text-red-300">Не удалось получить данные от API.</p>
+              <pre class="mt-4 p-2 bg-black/30 rounded-md text-xs text-left text-red-200 w-full overflow-x-auto">URL: {{ dataState().error?.url }}
+Ошибка: {{ dataState().error?.message }}</pre>
+              <p class="mt-4 text-slate-300">
+                Попробуйте переключиться в 
+                <button (click)="toggleDataSource()" class="underline font-bold hover:text-white">Тестовый режим</button>.
+              </p>
+            </div>
+          }
+          @case ('loaded') {
+            @if (dataState().items.length > 0) {
+              <app-wheel [items]="dataState().items" (onSpinComplete)="addToHistory($event)" />
+            } @else {
+              <div class="h-full flex flex-col items-center justify-center text-center bg-slate-800 rounded-lg border-4 border-slate-700 min-h-[600px] p-4">
+                <h3 class="text-2xl font-bold text-slate-400">Данные не найдены</h3>
+                <p class="mt-2 text-slate-500">
+                  {{ dataSource() === 'api' ? 'API вернул пустой список.' : 'Тестовый список пуст.' }}
+                </p>
+              </div>
+            }
+          }
+        }
+      </div>
+
+      <!-- Right WIN Column -->
+      <div class="flex flex-col justify-around items-center bg-zinc-900/50 rounded-lg px-1 sm:px-2">
+        <span class="text-4xl sm:text-5xl font-black text-amber-400" style="text-shadow: 0 0 8px #f59e0b, 0 0 16px #d97706;">W</span>
+        <span class="text-4xl sm:text-5xl font-black text-amber-400" style="text-shadow: 0 0 8px #f59e0b, 0 0 16px #d97706;">I</span>
+        <span class="text-4xl sm:text-5xl font-black text-amber-400" style="text-shadow: 0 0 8px #f59e0b, 0 0 16px #d97706;">N</span>
+      </div>
+    </div>
+    
+    <!-- Decorative Grille -->
+    <div class="mt-2 sm:mt-3 h-16 sm:h-20 bg-zinc-900 rounded-lg p-2" 
+         style="background-image: repeating-linear-gradient(-45deg, #27272a, #27272a 10px, #3f3f46 10px, #3f3f46 20px);">
+    </div>
+  </div>
+
+  <!-- Winners History Panel -->
+  <div class="w-full max-w-xs bg-zinc-800/80 p-3 rounded-2xl shadow-lg border-t border-zinc-700 self-start">
+    <h3 class="text-center text-lg font-bold text-slate-300 mb-4 border-b border-zinc-700 pb-2">Последние победители</h3>
+    <div class="flex flex-col gap-3">
+      @if (winnersHistory().length > 0) {
+        @for (winner of winnersHistory(); track winner.id + $index) {
+          <div class="flex items-center p-2 rounded-lg bg-zinc-700/50 border border-transparent transition-all duration-300"
+               [class.border-amber-400]="!$index"
+               [class.shadow-[0_0_15px_rgba(252,211,77,0.3)]]="!$index">
+            <img [src]="winner.avatarUrl" width="40" height="40" class="rounded-full" alt="Avatar">
+            <span class="ml-3 font-semibold text-slate-200">{{ winner.nickname }}</span>
+          </div>
+        }
+      } @else {
+        <p class="text-center text-sm text-slate-500 py-8">История пуста. Нажмите SPIN!</p>
+      }
+    </div>
+  </div>
+</main>
